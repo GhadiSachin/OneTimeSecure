@@ -1,0 +1,27 @@
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Dependencies
+node_modules/
+npm-debug.log
+yarn-error.log
+yarn.lock
+package-lock.json
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# Docker
+.docker/
+docker-volume/
+
+# OS/IDE
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo

@@ -1,55 +1,108 @@
-# OneTime Secure
+# OneTime Secure 🔒
 
-A self-hosted, open-source alternative to one-time secret sharing services with a zero-knowledge architecture.
+## Overview
+OneTime Secure is a self-hosted, zero-knowledge platform that allows engineering and operations teams to securely share sensitive information (such as passwords, API keys, or private notes) using single-use, self-destructing links.
+
+## Problem
+Sharing credentials over Slack, Microsoft Teams, or email is highly insecure. These platforms keep permanent logs of the text. Once you hit send, that credential lives on their servers indefinitely, waiting to be exposed in a future data breach.
+
+## Solution
+OneTime Secure ensures that sensitive data exists only temporarily and can only be viewed exactly once. It utilizes **Zero-Knowledge Encryption** in the browser, meaning the backend server never sees the plaintext data. Additionally, it uses **Atomic Database Locks** to ensure the encrypted blob is destroyed instantly upon the first viewing attempt, completely eliminating race conditions.
+
+## Key Features
+- **Zero-Knowledge Architecture:** AES-256-GCM encryption happens entirely in the browser.
+- **URL Fragment Protection:** The decryption key is sent in the URL hash (`#`), which modern browsers strictly keep local and never transmit to the server.
+- **Atomic Deletion:** Strict PostgreSQL `UPDATE ... RETURNING` locks prevent simultaneous reads.
+- **Premium UI:** Fully responsive, dark-mode SaaS dashboard with glassmorphism.
+- **Self-Hosted:** Deployable in seconds via Docker Compose.
+
+## Target Users
+Developers, DevOps Engineers, IT Administrators, and anyone who needs a compliant and secure way to exchange sensitive information without relying on third-party SaaS vendors.
+
+## Screenshots
+*(Add your screenshots here)*
+- `/docs/screenshots/create_secret.png`
+- `/docs/screenshots/view_secret.png`
+
+## User Flow
+1. **User** types a secret into the dashboard.
+2. **Browser** encrypts it and sends the ciphertext to the API.
+3. **API** stores the ciphertext in PostgreSQL and returns a unique Token.
+4. **Browser** generates a shareable URL containing the Token and the Decryption Key.
+5. **Recipient** opens the URL. 
+6. **API** fetches and atomically destroys the ciphertext in the database.
+7. **Browser** decrypts the ciphertext locally and displays the plaintext to the recipient.
+
+## Technology Stack
+- **Frontend:** React (Vite), Tailwind CSS v4, Lucide React
+- **Backend:** Node.js, Fastify, TypeScript
+- **Database:** PostgreSQL (for ACID guarantees)
+- **Cryptography:** Web Crypto API (`AES-256-GCM`)
+- **Deployment:** Docker, Docker Compose
 
 ## Architecture
-
-* **Frontend**: React, TypeScript, Vite, Tailwind CSS, shadcn/ui
-* **Backend**: Node.js, Fastify, PostgreSQL (for storage), Redis (for rate limiting and atomic locking)
-
-## Zero-Knowledge Security Model
-
-This application uses a zero-knowledge architecture. The backend never sees the plaintext secret.
-
-1. **Encryption**: The browser generates a cryptographically random 256-bit AES-GCM key. It encrypts the secret text using the Web Crypto API.
-2. **Storage**: The browser sends only the *encrypted payload* and a *token hash* to the server.
-3. **Distribution**: The decryption key is appended to the one-time URL as a URL fragment (e.g., `https://domain.com/s/<token>#<encryption-key>`). The URL fragment is never sent to the server.
-4. **Consumption**: The recipient visits the URL. The backend atomically returns the encrypted payload and marks the secret as consumed using a transactional row lock or Redis atomic delete.
-5. **Decryption**: The recipient's browser reads the key from the URL fragment and decrypts the payload locally.
+```mermaid
+flowchart LR
+    User([User]) -->|Inputs Secret| Frontend[React SPA]
+    Frontend -->|AES-256-GCM| Frontend
+    Frontend -->|POST Encrypted Blob| Backend[Fastify API]
+    Backend -->|Atomic Insert/Delete| Database[(PostgreSQL)]
+```
 
 ## Getting Started
 
-### Local Development Setup (Using Docker)
+### Prerequisites
+- Docker and Docker Compose installed on your machine.
 
-The easiest way to run the entire stack (Database, Cache, API, and Web Frontend) is via Docker Compose.
-
-1. Ensure you have Docker and Docker Compose installed.
-2. Clone this repository.
-3. (Optional) Create a `.env` file based on `.env.example` if you need to override the default credentials.
-4. From the root directory, run:
+### Installation
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/GhadiSachin/OneTimeSecure.git
+   cd OneTimeSecure
+   ```
+2. Configure environment variables (do not use real secrets in development):
+   ```bash
+   cp .env.example .env
+   ```
+3. Run the application stack:
    ```bash
    docker-compose up --build -d
    ```
-5. The services will be available at:
-   - **Frontend (Web)**: http://localhost:8080
-   - **Backend API**: http://localhost:3000
+4. Open your browser and navigate to `http://localhost:8080`.
 
-To view logs:
-```bash
-docker-compose logs -f
+## Environment Variables
+The application requires database configuration. Please refer to `.env.example` for the required keys. Never commit your actual `.env` file!
+
+## Project Structure
+```text
+OneTimeSecure/
+├── apps/
+│   ├── api/             # Fastify Backend
+│   └── web/             # React Frontend
+├── packages/
+│   ├── crypto/          # Shared AES-GCM logic
+│   └── shared/          # Shared types
+├── docs/                # Product Documentation & Workflow diagrams
+├── infra/               # Docker configurations
+├── .env.example
+├── .gitignore
+├── LICENSE
+└── README.md
 ```
 
-To shut down the services:
-```bash
-docker-compose down
-```
+## Documentation
+For an extensive breakdown of the system, including user personas, business rules, API documentation, and testing procedures, please view the [Full Product Documentation](docs/PRODUCT_DOCUMENTATION.md).
 
-## MVP Status
+## Security
+**Important:** Secrets should be configured through environment variables and should never be committed to the repository. The backend is explicitly designed to have zero knowledge of the plaintext secrets it hosts.
 
-Currently scaffolded:
-- Project monorepo structure
-- Docker Compose configuration for Postgres, Redis, API, and Web
-- Dockerfiles (`infra/docker/api.Dockerfile`, `infra/docker/web.Dockerfile`)
-- Core zero-knowledge cryptography logic (`packages/crypto/index.ts`)
+## Future Improvements
+- Redis-backed IP Rate Limiting for API abuse prevention.
+- Admin Authentication dashboard.
+- Configurable expiration times for unread secrets.
 
-To complete the MVP, follow the `SECURITY.md` guidelines and implement the Web Crypto logic across the React components and Fastify endpoints.
+## License
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Contact
+**Sachin Ghadi** - [GitHub Profile](https://github.com/GhadiSachin)
