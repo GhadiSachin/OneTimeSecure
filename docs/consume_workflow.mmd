@@ -1,0 +1,24 @@
+sequenceDiagram
+    participant R as User (Recipient)
+    participant B as Browser (Web Crypto API)
+    participant S as Server (Fastify API)
+    participant DB as PostgreSQL Database
+
+    R->>B: Opens URL (domain.com/s/TOKEN#KEY)
+    Note over B: Extracts TOKEN from URL path
+    Note over B: Extracts KEY from URL fragment (#)
+    R->>B: Clicks "Decrypt & View Secret"
+    B->>S: POST /api/public/secrets/TOKEN/consume
+    Note over S: Initiates Database Request
+    S->>DB: UPDATE secrets SET is_consumed = TRUE WHERE token = TOKEN AND is_consumed = FALSE RETURNING encrypted_payload
+    
+    alt Secret Exists and NOT Consumed
+        DB-->>S: Returns encrypted_payload (Atomic Success)
+        S-->>B: Returns { encrypted_payload }
+        Note over B: Decrypts payload using local KEY
+        B-->>R: Displays plaintext secret
+    else Secret Missing or ALREADY Consumed
+        DB-->>S: Returns 0 rows (Atomic Failure)
+        S-->>B: Returns 404 Not Found / Error
+        B-->>R: Displays "Secret Unavailable" Error
+    end

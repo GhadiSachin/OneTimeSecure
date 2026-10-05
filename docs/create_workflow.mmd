@@ -1,0 +1,16 @@
+sequenceDiagram
+    participant U as User (Sender)
+    participant B as Browser (Web Crypto API)
+    participant S as Server (Fastify API)
+    participant DB as PostgreSQL Database
+
+    U->>B: Types plaintext secret & clicks "Generate"
+    Note over B: Generates secure AES-256-GCM key
+    Note over B: Encrypts plaintext using key & IV
+    B->>S: POST /api/secrets (Encrypted Payload + IV)
+    Note over S: Generates random Token
+    S->>DB: INSERT INTO secrets (token, encrypted_payload)
+    DB-->>S: Success
+    S-->>B: Returns { token }
+    Note over B: Constructs URL: domain.com/s/TOKEN#KEY
+    B-->>U: Displays secure URL to User
